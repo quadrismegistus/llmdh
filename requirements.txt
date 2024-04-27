@@ -1,0 +1,9 @@
+pandas
+logmap
+sqlitedict
+ipython
+google-generativeai
+openai
+ollama
+ollama
+scipy
