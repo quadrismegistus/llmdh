@@ -5,5 +5,4 @@ ipython
 google-generativeai
 openai
 ollama
-ollama
 scipy

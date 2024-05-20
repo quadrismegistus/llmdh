@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llmdh"
+requires-python = ">=3.8.2,<3.13"
+authors = [
+    { name = "Ryan Heuser", email = "ryan.heuser@gmail.com" },
+]
+description = "LLMs for Digital Humanities"
+readme = "README.md"
+license = { file = "LICENSE" }
+dynamic = ["version", "dependencies"]
+urls = { "Homepage" = "https://github.com/quadrismegistus/llmdh", "Project Home" = "https://github.com/quadrismegistus/llmdh", "Bug Tracker" = "https://github.com/quadrismegistus/llmdh/issues" }
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Programming Language :: Python :: 3",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
+
+# [project.scripts]
+# round-earth = "round_earth.cli:run"
+
+[tool.setuptools]
+packages = ['llmdh']
+
+[tool.setuptools.dynamic]
+version = {attr = "_version.__version__"}
+dependencies = {file = "requirements.txt"}
