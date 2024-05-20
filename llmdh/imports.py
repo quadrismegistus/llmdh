@@ -14,7 +14,8 @@ import datetime as dt
 from functools import lru_cache, cached_property
 from contextlib import contextmanager
 from pprint import pprint, pformat
-import prosodic
+
+# import prosodic
 from tqdm import tqdm
 
 tqdm.pandas()
