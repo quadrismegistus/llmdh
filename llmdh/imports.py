@@ -41,8 +41,11 @@ from google.generativeai.types import (
 import ollama
 import google.generativeai as genai
 from openai import OpenAI
+import plotnine as p9
 
+pd.options.display.max_rows = 100
 
+p9.options.figure_size = 8, 7
 pd.options.display.max_columns = None
 
 # paths
@@ -55,10 +58,10 @@ os.makedirs(PATH_DATA, exist_ok=True)
 
 
 LLM_DEFAULT_MODEL_LOCAL = "llama2-uncensored:7b"
-LLM_DEFAULT_MODEL_REMOTE = "gemini-pro"
+LLM_DEFAULT_MODEL_REMOTE = "gemini-1.5-pro-latest"
 LLM_DEFAULT_MODEL_OPENAI = "gpt-3.5-turbo"
 LLM_DEFAULT_MODEL_CLAUDE = "claude-3-haiku-20240307"
-LLM_DEFAULT_MODEL = os.getenv("LLM_DEFAULT_MODEL", LLM_DEFAULT_MODEL_OPENAI)
+LLM_DEFAULT_MODEL = os.getenv("LLM_DEFAULT_MODEL", LLM_DEFAULT_MODEL_REMOTE)
 OPENAI_BASEURL = None
 
 MAX_TOKENS = 1000
@@ -78,3 +81,5 @@ PATH_OUTPUT = os.path.join(PATH_DATA, "rhyme_analysis2.db")
 cache_obj_rhyme = Cache(os.path.join(PATH_DATA, "cache.memoized.rhyme.dc"))
 cache_obj_meter = Cache(os.path.join(PATH_DATA, "cache.memoized.meter.dc"))
 DEFAULT_TEMP = 1.0
+
+from .utils import *

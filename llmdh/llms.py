@@ -211,10 +211,10 @@ class LLM:
                 lm.log(f"PROMPT: {prompt}")
             try:
                 # res = gemini_api().generate_content(prompt)
-                res = cls.gemini_api().generate_content(
+                res = cls.gemini_api(model=model).generate_content(
                     prompt,
                     generation_config=GenerationConfig(
-                        max_output_tokens=MAX_TOKENS,
+                        max_output_tokens=None,
                         temperature=temp,
                     ),
                     safety_settings={
@@ -223,6 +223,7 @@ class LLM:
                         HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
                         HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
                     },
+                    request_options={"timeout": 600},
                 )
 
                 text = "\n\n".join(
@@ -243,7 +244,7 @@ class LLM:
         system_prompt: str = "",
         example_prompts: List[Tuple[str, str]] = [],
         model=LLM_DEFAULT_MODEL,
-        verbose=True,
+        verbose=False,
         max_tokens=MAX_TOKENS,
         name: str = "",
         filename: str = "",
@@ -333,11 +334,14 @@ class LLM:
 
     @classmethod
     def get_filename(self, model="", filekey=""):
+        if self.filename:
+            return self.filename
         return f"data.{filekey if filekey else self.filekey}.llm.{model if model else self.model}.sqlitedict"
 
     @classmethod
     def get_path_db(self, model="", filekey=""):
-        return os.path.join(PATH_DATA, self.get_filename(model=model, filekey=filekey))
+        fn = self.get_filename(model=model, filekey=filekey)
+        return os.path.join(PATH_DATA, fn) if not os.path.isabs(fn) else fn
 
     @property
     def raw(self):
