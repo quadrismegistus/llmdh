@@ -344,6 +344,7 @@ class NovelLLM(LLM):
                     lm.set_progress_desc(f"failed on {fn}. sleeping for {nap}s")
                 time.sleep(nap)
 
+    @cache
     def graph(self):
         import networkx as nx
 
@@ -410,9 +411,17 @@ Return a list of JSON dictionaries of the following form:
 ]
 """
 
-    def plot_network(self):
+    def plot_network(self, force=False):
         import networkx as nx
         import matplotlib.pyplot as plt
+
+        ofnfn = os.path.join(
+            PATH_DATA,
+            "relationships",
+            f'relationship_graphs.{self.name.replace(".txt",".png")}',
+        )
+        if not force and os.path.exists(ofnfn):
+            return
 
         G = self.graph()
 
@@ -428,9 +437,6 @@ Return a list of JSON dictionaries of the following form:
                 return "bisque"
             return "gray"
 
-        # Get node colors based on gender attribute
-        node_colors = [get_color(d) for node, d in G.nodes(data=True)]
-
         # Get edge widths based on relationship_likelihood attribute
         def get_size(d):
             try:
@@ -438,21 +444,19 @@ Return a list of JSON dictionaries of the following form:
             except Exception:
                 return 1
 
-        edge_widths = [get_size(d) for a, b, d in G.edges(data=True)]
+        def get_color(d, k="relationship_happened"):
+            if not d.get(k):
+                return "gray"
+            v = str(d.get(k)).lower()
+            if "true" in v:
+                return "seagreen"
+            if "false" in v:
+                return "orangered"
+            return "gray"
 
-        # Define color mapping for 'relationship_happened'
-        edge_color_map = {
-            "true": "seagreen",
-            "True": "seagreen",
-            "Presumed True": "seagreen",
-            True: "seagreen",
-            False: "orangered",
-            "false": "orangered",
-            "False": "orangered",
-        }
-        edge_colors = [
-            (edge_color_map[G.edges[edge]["relationship_happened"]]) for edge in G.edges
-        ]
+        node_colors = [get_color(d) for node, d in G.nodes(data=True)]
+        edge_widths = [get_size(d) for a, b, d in G.edges(data=True)]
+        edge_colors = [get_color(d) for a, b, d in G.edges(data=True)]
 
         nx.draw(
             G,
@@ -483,16 +487,12 @@ Return a list of JSON dictionaries of the following form:
 
         plt.tight_layout()
         plt.savefig(
-            os.path.join(
-                PATH_DATA,
-                "relationships",
-                f'relationship_graphs.{self.name.replace(".txt",".png")}',
-            ),
+            ofnfn,
             dpi=300,
         )
         plt.close()
         # plt.show()
-        return plt
+        # return plt
 
 
 class NovelCharactersLLM(NovelLLM):

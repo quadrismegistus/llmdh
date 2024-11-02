@@ -1,6 +1,8 @@
-import sys
 
+import sys
+sys.path.insert(0, "/Users/ryan/github/multiprompt")
 sys.path.insert(0, "/Users/ryan/github/logmap")
+sys.path.insert(0, "/Users/ryan/github/hashstash")
 sys.path.insert(0, "/Users/ryan/github/prosodic")
 from diskcache import Cache
 from typing import *
@@ -58,8 +60,21 @@ PATH_DATA = PATH_HOME
 os.makedirs(PATH_DATA, exist_ok=True)
 
 
+from hashstash import HashStash
+PATH_STASH = os.path.join(PATH_DATA, "stash")
+stash = HashStash(
+    PATH_STASH,
+    engine="pairtree",
+    compress=False,
+    b64=False,
+    serializer="hashstash",
+    append_mode=True,
+)
+
+
 LLM_DEFAULT_MODEL_LOCAL = "llama2-uncensored:7b"
-LLM_DEFAULT_MODEL_REMOTE = "gemini-1.5-pro-latest"
+# LLM_DEFAULT_MODEL_REMOTE = "gemini-1.5-pro-latest"
+LLM_DEFAULT_MODEL_REMOTE = "gpt-4o-mini"
 LLM_DEFAULT_MODEL_OPENAI = "gpt-3.5-turbo"
 LLM_DEFAULT_MODEL_CLAUDE = "claude-3-haiku-20240307"
 LLM_DEFAULT_MODEL = os.getenv("LLM_DEFAULT_MODEL", LLM_DEFAULT_MODEL_REMOTE)

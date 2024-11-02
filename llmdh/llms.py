@@ -64,7 +64,8 @@ class LLM:
         return o
 
     @classmethod
-    def generate(
+    @stash.stashed_result
+    def generate_response(
         cls,
         user_prompt: str = "",
         system_prompt: str = "",
@@ -223,7 +224,7 @@ class LLM:
                         HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
                         HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
                     },
-                    request_options={"timeout": 600},
+                    # request_options={"timeout": 600},
                 )
 
                 text = "\n\n".join(
@@ -243,12 +244,11 @@ class LLM:
         user_prompt: str = "",
         system_prompt: str = "",
         example_prompts: List[Tuple[str, str]] = [],
-        model=LLM_DEFAULT_MODEL,
+        model=None,
+        models=[],
         verbose=False,
         max_tokens=MAX_TOKENS,
         name: str = "",
-        filename: str = "",
-        filekey: str = "",
         force=False,
         **kwargs,
     ):
@@ -256,20 +256,20 @@ class LLM:
         ## override class attrs?
         if model:
             self.model = model
+            self.models = [model]
+        elif models:
+            self.model = models[0]
+            self.model = models
+        else:
+            self.model = LLM_DEFAULT_MODEL
+            self.models = [self.model]
+
         if user_prompt:
             self.user_prompt = user_prompt
         if system_prompt:
             self.system_prompt = system_prompt
         if example_prompts:
             self.example_prompts = example_prompts
-        if filekey:
-            self.filekey = filekey
-        elif not self.filekey:
-            self.filekey = self.__class__.__name__
-        if filename:
-            self.filename = filename
-        elif not self.filename:
-            self.filename = self.get_filename(filekey=self.filekey, model=model)
 
         ## instance attrs
         self.name = self.user_prompt if not name else name
@@ -292,131 +292,25 @@ class LLM:
     def prompt(self):
         return self.get_prompt()
 
-    def gen(self, verbose=None, max_tokens=None):
-        return type(self).generate(
-            user_prompt=self.user_prompt,
-            system_prompt=self.system_prompt,
-            example_prompts=self.example_prompts,
-            model=self.model,
-            verbose=self.verbose if verbose is None else verbose,
-            max_tokens=self.max_tokens if max_tokens is None else max_tokens,
-            name=self.name,
+    def generate(self, *args, force=False, postprocess=True,**kwargs):
+        response = self.generate_response(
+            *args, 
+            _force=self._force or force, 
+            **kwargs
         )
+        return self.postprocess_response(response) if postprocess else response
+    
+    @classmethod
+    def postprocess_response(cls, response):
+        return response
 
     @cached_property
     def is_valid(self):
-        return self.parsed_response is not None
+        return self.generate() is not None
 
-    @classmethod
-    @property
-    def path_db(self):
-        return self.get_path_db()
+    def gather(self, **kwargs):
 
-    @classmethod
-    @property
-    def db(self):
-        return self.get_db()
-
-    @classmethod
-    @property
-    def db_read(self):
-        if not os.path.exists(self.path_db):
-            flag = "c"
-        else:
-            flag = "r"
-        return self.get_db(flag=flag)
-
-    @classmethod
-    def get_db(self, flag="c", model="", filekey=""):
-        return SqliteDict(
-            self.get_path_db(model=model, filekey=filekey), autocommit=True, flag=flag
-        )
-
-    @classmethod
-    def get_filename(self, model="", filekey=""):
-        if self.filename:
-            return self.filename
-        return f"data.{filekey if filekey else self.filekey}.llm.{model if model else self.model}.sqlitedict"
-
-    @classmethod
-    def get_path_db(self, model="", filekey=""):
-        fn = self.get_filename(model=model, filekey=filekey)
-        return os.path.join(PATH_DATA, fn) if not os.path.isabs(fn) else fn
-
-    @property
-    def raw(self):
-        with self.db_read as db:
-            return db.get(self.name)
-
-    @property
-    def cached_result(self):
-        ld = self.raw
-        return ld[-1].get("result") if ld else None
-
-    @cached_property
-    def response(self):
-        with self.db_read as db:
-            if not self._force and self.name in db:
-                res = db[self.name][-1]["response"]
-                if res:
-                    return res
-        return self.gen()
-
-    @cached_property
-    def result(self):
-        res = self.cached_result
-        if self._force or not res:
-            res = self.parsed_response
-            self.save()
-        return res
-
-    @cached_property
-    def parsed_response(self):
-        return self.response
-
-    def save(self):
-        with self.get_db() as db:
-            if self.is_valid:
-                outd = {
-                    "model": self.model,
-                    "system_prompt": self.system_prompt,
-                    "example_prompts": self.example_prompts,
-                    "user_prompt": self.user_prompt,
-                    "input_data": self.input_data,
-                    "response": self.response,
-                    "result": self.parsed_response,
-                    "is_valid": self.is_valid,
-                }
-                outkey = self.name
-                with self.db as db:
-                    if not outkey in db:
-                        db[outkey] = [outd]
-                    else:
-                        try:
-                            already = any(
-                                (x["result"] == outd["result"]) for x in db[outkey]
-                            )
-                            if already:
-                                logger.warning("already saved")
-                                return
-                        except Exception:
-                            pass
-                        db[outkey] = db[outkey] + [outd]
-
-    @classmethod
-    def gather(self):
-        o = []
-        for model in self.models:
-            db = self.get_db(model=model)
-            for key in sorted(list(db.keys())):
-                for d in db[key]:
-                    if type(d["result"]) == dict:
-                        resd = d.pop("result")
-                        odx = {**d, **resd}
-                    else:
-                        odx = {**d}
-                    o.append(odx)
-        return pd.DataFrame(o)
+        return self.generate.stash.assemble_ld(**kwargs)
 
     @classmethod
     def run(cls, model=LLM_DEFAULT_MODEL, verbose=False, force=False, **kwargs):
